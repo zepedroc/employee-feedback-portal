@@ -11,7 +11,7 @@ const applicationTables = {
   magicLinks: defineTable({
     companyId: v.id("companies"),
     linkId: v.string(), // unique identifier for the magic link
-    name: v.string(), // descriptive name for the link
+    name: v.optional(v.string()), // descriptive name for the link (optional for backward compatibility)
     isActive: v.boolean(),
     createdBy: v.id("users"),
   })

@@ -10,7 +10,6 @@ function generateLinkId(): string {
 export const create = mutation({
   args: {
     companyId: v.id("companies"),
-    name: v.string(),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -29,15 +28,53 @@ export const create = mutation({
       throw new Error("Not authorized");
     }
 
+    // Check if a magic link already exists for this company
+    const existingLink = await ctx.db
+      .query("magicLinks")
+      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+      .first();
+
+    if (existingLink) {
+      // Return existing link instead of creating a new one
+      return existingLink._id;
+    }
+
     const linkId = generateLinkId();
 
     return await ctx.db.insert("magicLinks", {
       companyId: args.companyId,
       linkId,
-      name: args.name,
       isActive: true,
       createdBy: userId,
     });
+  },
+});
+
+export const getCompanyLink = query({
+  args: {
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    // Check if user is a manager of this company
+    const manager = await ctx.db
+      .query("managers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .filter((q) => q.eq(q.field("companyId"), args.companyId))
+      .first();
+
+    if (!manager) {
+      throw new Error("Not authorized");
+    }
+
+    return await ctx.db
+      .query("magicLinks")
+      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+      .first();
   },
 });
 

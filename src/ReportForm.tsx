@@ -67,7 +67,7 @@ export function ReportForm() {
               Thank you for your feedback. Your report has been submitted successfully and will be reviewed by management.
             </p>
             <button
-              onClick={() => navigate("/")}
+              onClick={() => window.location.reload()}
               className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
             >
               Submit Another Report
@@ -107,12 +107,6 @@ export function ReportForm() {
       <div className="max-w-2xl mx-auto px-4">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Submit a Report</h1>
-          <p className="text-lg text-gray-600">
-            Report to <span className="font-semibold">{magicLink.company?.name}</span>
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            Via: {magicLink.name}
-          </p>
         </div>
 
         <div className="bg-white rounded-lg shadow-sm border p-6">
@@ -163,62 +157,6 @@ export function ReportForm() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
                 required
               />
-            </div>
-
-            <div className="border-t pt-6">
-              <div className="flex items-center mb-4">
-                <input
-                  id="anonymous"
-                  type="checkbox"
-                  checked={formData.isAnonymous}
-                  onChange={(e) => setFormData({ ...formData, isAnonymous: e.target.checked })}
-                  className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
-                />
-                <label htmlFor="anonymous" className="ml-2 block text-sm text-gray-700">
-                  Submit anonymously
-                </label>
-              </div>
-
-              {!formData.isAnonymous && (
-                <div className="space-y-4">
-                  <div>
-                    <label htmlFor="reporterName" className="block text-sm font-medium text-gray-700 mb-2">
-                      Your Name (Optional)
-                    </label>
-                    <input
-                      id="reporterName"
-                      type="text"
-                      value={formData.reporterName}
-                      onChange={(e) => setFormData({ ...formData, reporterName: e.target.value })}
-                      placeholder="Your full name"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
-                    />
-                  </div>
-                  <div>
-                    <label htmlFor="reporterEmail" className="block text-sm font-medium text-gray-700 mb-2">
-                      Your Email (Optional)
-                    </label>
-                    <input
-                      id="reporterEmail"
-                      type="email"
-                      value={formData.reporterEmail}
-                      onChange={(e) => setFormData({ ...formData, reporterEmail: e.target.value })}
-                      placeholder="your.email@example.com"
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>Privacy Notice:</strong> Your report will be reviewed by authorized management personnel. 
-                {formData.isAnonymous 
-                  ? " Anonymous reports cannot be traced back to you."
-                  : " If you provide contact information, it may be used to follow up on your report."
-                }
-              </p>
             </div>
 
             <button

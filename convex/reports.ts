@@ -60,14 +60,12 @@ export const getCompanyReports = query({
       .order("desc")
       .collect();
 
-    // Get magic link names for each report
+    // Get assigned users for each report
     const reportsWithLinks = await Promise.all(
       reports.map(async (report) => {
-        const magicLink = await ctx.db.get(report.magicLinkId);
         const assignedUser = report.assignedTo ? await ctx.db.get(report.assignedTo) : null;
         return {
           ...report,
-          magicLinkName: magicLink?.name || "Unknown",
           assignedUserName: assignedUser?.name || assignedUser?.email || null,
         };
       })
@@ -153,12 +151,10 @@ export const getReport = query({
       throw new Error("Not authorized");
     }
 
-    const magicLink = await ctx.db.get(report.magicLinkId);
     const assignedUser = report.assignedTo ? await ctx.db.get(report.assignedTo) : null;
 
     return {
       ...report,
-      magicLinkName: magicLink?.name || "Unknown",
       assignedUserName: assignedUser?.name || assignedUser?.email || null,
     };
   },

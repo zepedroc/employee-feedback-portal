@@ -99,7 +99,6 @@ export function Reports({ companyId }: ReportsProps) {
               <div className="flex justify-between items-center text-xs text-gray-500">
                 <span>
                   {report.isAnonymous ? "Anonymous" : report.reporterName || "Confidential"} • 
-                  {report.magicLinkName} • 
                   {report.category}
                 </span>
                 <span>{new Date(report._creationTime).toLocaleDateString()}</span>
@@ -181,10 +180,6 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
         <div>
           <span className="font-semibold text-gray-700">Category:</span>
           <p className="text-gray-600 capitalize">{report.category}</p>
-        </div>
-        <div>
-          <span className="font-semibold text-gray-700">Source:</span>
-          <p className="text-gray-600">{report.magicLinkName}</p>
         </div>
         <div>
           <span className="font-semibold text-gray-700">Reporter:</span>
