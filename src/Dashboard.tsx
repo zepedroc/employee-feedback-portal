@@ -3,8 +3,12 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Reports } from "./Reports";
 import { Id } from "../convex/_generated/dataModel";
-import { Copy } from "lucide-react";
+import { Copy, LayoutDashboard } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Company {
   _id: Id<"companies">;
@@ -42,53 +46,60 @@ export function Dashboard({ company }: DashboardProps) {
   const magicLinkUrl = magicLink ? `${window.location.origin}/report/${magicLink.linkId}` : "";
 
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-primary mb-2">{company.name}</h1>
-        <p className="text-lg text-secondary">
-          Manage your employee feedback system
-        </p>
-      </div>
-
-      {/* Magic Link Section */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Magic Link
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="text"
-            readOnly
-            value={magicLinkUrl}
-            placeholder="Generating link..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 focus:outline-none focus:ring-1 focus:ring-primary"
-          />
-          <button
-            onClick={copyToClipboard}
-            disabled={!magicLink}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <Copy className="w-4 h-4" />
-            Copy
-          </button>
+    <div className="space-y-8">
+      <div className="flex items-center gap-3">
+        <LayoutDashboard className="h-10 w-10 text-primary" />
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight">{company.name}</h1>
+          <p className="text-lg text-muted-foreground">
+            Manage your employee feedback system
+          </p>
         </div>
       </div>
 
-      {/* Reports Section */}
-      <div className="mb-6">
-        <div className="bg-gray-100 p-1 rounded-lg inline-block">
-          <div className="px-4 py-2 font-medium text-primary bg-white shadow-sm rounded-md">
-            Reports
-            {newReportsCount > 0 && (
-              <span className="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                {newReportsCount}
-              </span>
-            )}
+      <Card>
+        <CardHeader>
+          <CardTitle>Magic Link</CardTitle>
+          <CardDescription>
+            Share this link with your employees to collect anonymous feedback.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2">
+            <div className="grid flex-1 gap-2">
+              <Label htmlFor="link" className="sr-only">
+                Link
+              </Label>
+              <Input
+                id="link"
+                readOnly
+                value={magicLinkUrl}
+                placeholder="Generating link..."
+              />
+            </div>
+            <Button
+              onClick={copyToClipboard}
+              disabled={!magicLink}
+              className="flex items-center gap-2"
+            >
+              <Copy className="w-4 h-4" />
+              Copy
+            </Button>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      <Reports companyId={company._id} />
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold tracking-tight">Reports</h2>
+          {newReportsCount > 0 && (
+            <span className="bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded-full">
+              {newReportsCount} New
+            </span>
+          )}
+        </div>
+        <Reports companyId={company._id} />
+      </div>
     </div>
   );
 }
