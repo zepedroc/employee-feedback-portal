@@ -24,9 +24,9 @@ export const submit = mutation({
       title: args.title,
       description: args.description,
       category: args.category,
-      isAnonymous: args.isAnonymous,
-      reporterName: args.reporterName,
-      reporterEmail: args.reporterEmail,
+      isAnonymous: true, // Reports are always anonymous
+      reporterName: undefined, // Never store reporter name
+      reporterEmail: undefined, // Never store reporter email
       status: "new",
       priority: "medium",
     });

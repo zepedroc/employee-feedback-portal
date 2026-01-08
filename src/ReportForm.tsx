@@ -12,9 +12,6 @@ export function ReportForm() {
     title: "",
     description: "",
     category: "issue",
-    isAnonymous: true,
-    reporterName: "",
-    reporterEmail: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -89,9 +86,9 @@ export function ReportForm() {
         title: formData.title.trim(),
         description: formData.description.trim(),
         category: formData.category,
-        isAnonymous: formData.isAnonymous,
-        reporterName: formData.isAnonymous ? undefined : formData.reporterName.trim(),
-        reporterEmail: formData.isAnonymous ? undefined : formData.reporterEmail.trim(),
+        isAnonymous: true,
+        reporterName: undefined,
+        reporterEmail: undefined,
       });
       setSubmitted(true);
     } catch (error) {

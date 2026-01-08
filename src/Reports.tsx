@@ -23,6 +23,14 @@ const priorityColors = {
   urgent: "bg-red-100 text-red-800",
 };
 
+const formatDate = (timestamp: number) => {
+  const date = new Date(timestamp);
+  const day = date.getDate();
+  const month = date.toLocaleDateString('en-US', { month: 'short' });
+  const year = date.getFullYear();
+  return `${day} ${month} ${year}`;
+};
+
 export function Reports({ companyId }: ReportsProps) {
   const [selectedReport, setSelectedReport] = useState<Id<"reports"> | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -87,21 +95,22 @@ export function Reports({ companyId }: ReportsProps) {
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-semibold text-gray-900 truncate">{report.title}</h3>
                 <div className="flex space-x-2 ml-4">
-                  <span className={`px-2 py-1 text-xs rounded-full ${priorityColors[report.priority as keyof typeof priorityColors]}`}>
-                    {report.priority}
-                  </span>
+                  {report.priority !== "medium" && report.priority !== "high" && (
+                    <span className={`px-2 py-1 text-xs rounded-full ${priorityColors[report.priority as keyof typeof priorityColors]}`}>
+                      {report.priority}
+                    </span>
+                  )}
                   <span className={`px-2 py-1 text-xs rounded-full ${statusColors[report.status as keyof typeof statusColors]}`}>
                     {report.status.replace("_", " ")}
+                  </span>
+                  <span className="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800">
+                    {report.category}
                   </span>
                 </div>
               </div>
               <p className="text-sm text-gray-600 mb-2 line-clamp-2">{report.description}</p>
-              <div className="flex justify-between items-center text-xs text-gray-500">
-                <span>
-                  {report.isAnonymous ? "Anonymous" : report.reporterName || "Confidential"} • 
-                  {report.category}
-                </span>
-                <span>{new Date(report._creationTime).toLocaleDateString()}</span>
+              <div className="flex justify-end items-center text-xs text-gray-500">
+                <span>{formatDate(report._creationTime)}</span>
               </div>
             </div>
           ))}
@@ -162,9 +171,11 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
       <div>
         <h3 className="font-bold text-lg text-gray-900 mb-2">{report.title}</h3>
         <div className="flex space-x-2 mb-4">
-          <span className={`px-2 py-1 text-xs rounded-full ${priorityColors[report.priority as keyof typeof priorityColors]}`}>
-            {report.priority}
-          </span>
+          {report.priority !== "medium" && report.priority !== "high" && (
+            <span className={`px-2 py-1 text-xs rounded-full ${priorityColors[report.priority as keyof typeof priorityColors]}`}>
+              {report.priority}
+            </span>
+          )}
           <span className={`px-2 py-1 text-xs rounded-full ${statusColors[report.status as keyof typeof statusColors]}`}>
             {report.status.replace("_", " ")}
           </span>
@@ -182,23 +193,11 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
           <p className="text-gray-600 capitalize">{report.category}</p>
         </div>
         <div>
-          <span className="font-semibold text-gray-700">Reporter:</span>
-          <p className="text-gray-600">
-            {report.isAnonymous ? "Anonymous" : report.reporterName || "Confidential"}
-          </p>
-        </div>
-        <div>
           <span className="font-semibold text-gray-700">Submitted:</span>
-          <p className="text-gray-600">{new Date(report._creationTime).toLocaleDateString()}</p>
+          <p className="text-gray-600">{formatDate(report._creationTime)}</p>
         </div>
       </div>
 
-      {!report.isAnonymous && report.reporterEmail && (
-        <div>
-          <span className="font-semibold text-gray-700">Contact:</span>
-          <p className="text-gray-600 text-sm">{report.reporterEmail}</p>
-        </div>
-      )}
 
       <hr />
 
