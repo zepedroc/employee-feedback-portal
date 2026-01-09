@@ -57,11 +57,15 @@ export function Dashboard({ company }: DashboardProps) {
     }
   };
 
-  const copyToClipboard = () => {
+  const copyToClipboard = async () => {
     if (!magicLink) return;
     const url = `${window.location.origin}/report/${magicLink.linkId}`;
-    navigator.clipboard.writeText(url);
-    toast.success("Link copied to clipboard!");
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Link copied to clipboard!");
+    } catch {
+      toast.error("Failed to copy link to clipboard");
+    }
   };
 
   const magicLinkUrl = magicLink ? `${window.location.origin}/report/${magicLink.linkId}` : "";
@@ -80,7 +84,7 @@ export function Dashboard({ company }: DashboardProps) {
 
       <Card>
         <CardHeader>
-          <CardTitle>Your Magic Link</CardTitle>
+          <CardTitle>Your Reporting Link</CardTitle>
           <CardDescription>
             Share this link with your employees to collect their feedback.
           </CardDescription>
@@ -99,7 +103,7 @@ export function Dashboard({ company }: DashboardProps) {
               />
             </div>
             <Button
-              onClick={copyToClipboard}
+              onClick={() => void copyToClipboard()}
               disabled={!magicLink}
               className="flex items-center gap-2"
             >
@@ -121,7 +125,7 @@ export function Dashboard({ company }: DashboardProps) {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleInvite} className="space-y-4">
+          <form onSubmit={(e) => void handleInvite(e)} className="space-y-4">
             <div className="flex gap-2">
               <div className="grid flex-1 gap-2">
                 <Label htmlFor="invite-email">Email Address</Label>
