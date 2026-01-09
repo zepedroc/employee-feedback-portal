@@ -7,12 +7,14 @@ import { Toaster } from "sonner";
 import { Dashboard } from "./Dashboard";
 import { CompanySetup } from "./CompanySetup";
 import { ReportForm } from "./ReportForm";
+import { InviteAccept } from "./InviteAccept";
 
 export default function App() {
   return (
     <Router>
       <Routes>
         <Route path="/report/:linkId" element={<ReportForm />} />
+        <Route path="/invite/:token" element={<InviteAccept />} />
         <Route path="/" element={<MainApp />} />
       </Routes>
     </Router>

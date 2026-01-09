@@ -28,10 +28,11 @@ export const create = mutation({
       throw new Error("Not authorized");
     }
 
-    // Check if a magic link already exists for this company
+    // Check if this manager already has a magic link for this company
     const existingLink = await ctx.db
       .query("magicLinks")
       .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+      .filter((q) => q.eq(q.field("createdBy"), userId))
       .first();
 
     if (existingLink) {
@@ -157,5 +158,35 @@ export const getByLinkId = query({
       ...link,
       company,
     };
+  },
+});
+
+export const getManagerLink = query({
+  args: {
+    companyId: v.id("companies"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Not authenticated");
+    }
+
+    // Check if user is a manager of this company
+    const manager = await ctx.db
+      .query("managers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .filter((q) => q.eq(q.field("companyId"), args.companyId))
+      .first();
+
+    if (!manager) {
+      throw new Error("Not authorized");
+    }
+
+    // Get the magic link created by this manager
+    return await ctx.db
+      .query("magicLinks")
+      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+      .filter((q) => q.eq(q.field("createdBy"), userId))
+      .first();
   },
 });

@@ -71,18 +71,6 @@ export function SignInForm() {
             </button>
           </div>
         </form>
-        <div className="flex items-center justify-center my-4">
-          <hr className="grow border-border" />
-          <span className="mx-4 text-muted-foreground text-xs uppercase">or</span>
-          <hr className="grow border-border" />
-        </div>
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={() => void signIn("anonymous")}
-        >
-          Sign in anonymously
-        </Button>
       </CardContent>
     </Card>
   );

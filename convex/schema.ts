@@ -45,6 +45,18 @@ const applicationTables = {
   })
     .index("by_user", ["userId"])
     .index("by_company", ["companyId"]),
+
+  invitations: defineTable({
+    companyId: v.id("companies"),
+    email: v.string(),
+    invitedBy: v.id("users"),
+    token: v.string(),
+    status: v.string(), // "pending", "accepted", "expired"
+    expiresAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_email", ["email"])
+    .index("by_company", ["companyId"]),
 };
 
 export default defineSchema({

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 
 interface ReportsProps {
   companyId: Id<"companies">;
@@ -45,8 +46,16 @@ const Badge = ({ children, className }: { children: React.ReactNode, className: 
 export function Reports({ companyId }: ReportsProps) {
   const [selectedReport, setSelectedReport] = useState<Id<"reports"> | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [showOnlyMyLink, setShowOnlyMyLink] = useState(false);
 
-  const reports = useQuery(api.reports.getCompanyReports, { companyId });
+  const managerLink = useQuery(api.magicLinks.getManagerLink, { companyId });
+  const reports = useQuery(
+    api.reports.getCompanyReports,
+    {
+      companyId,
+      magicLinkId: showOnlyMyLink && managerLink?._id ? managerLink._id : undefined,
+    }
+  );
   const selectedReportData = useQuery(
     api.reports.getReport,
     selectedReport ? { reportId: selectedReport } : "skip"
@@ -79,20 +88,34 @@ export function Reports({ companyId }: ReportsProps) {
       {/* Reports List */}
       <div className="lg:col-span-2 space-y-4">
         <div className="flex justify-between items-center mb-2">
-          <h2 className="text-xl font-semibold">All Reports</h2>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="All Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="new">New</SelectItem>
-              <SelectItem value="reviewing">Reviewing</SelectItem>
-              <SelectItem value="in_progress">In Progress</SelectItem>
-              <SelectItem value="resolved">Resolved</SelectItem>
-              <SelectItem value="closed">Closed</SelectItem>
-            </SelectContent>
-          </Select>
+          <h2 className="text-xl font-semibold">
+            {showOnlyMyLink ? "My Link's Reports" : "All Reports"}
+          </h2>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="filter-toggle"
+                checked={showOnlyMyLink}
+                onCheckedChange={setShowOnlyMyLink}
+              />
+              <Label htmlFor="filter-toggle" className="text-sm cursor-pointer">
+                My Link Only
+              </Label>
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="All Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="new">New</SelectItem>
+                <SelectItem value="reviewing">Reviewing</SelectItem>
+                <SelectItem value="in_progress">In Progress</SelectItem>
+                <SelectItem value="resolved">Resolved</SelectItem>
+                <SelectItem value="closed">Closed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="space-y-3">

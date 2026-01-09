@@ -16,7 +16,10 @@ import type {
 import type * as auth from "../auth.js";
 import type * as companies from "../companies.js";
 import type * as http from "../http.js";
+import type * as invitations from "../invitations.js";
 import type * as magicLinks from "../magicLinks.js";
+import type * as notifications from "../notifications.js";
+import type * as notificationsQueries from "../notificationsQueries.js";
 import type * as reports from "../reports.js";
 import type * as router from "../router.js";
 
@@ -32,7 +35,10 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   companies: typeof companies;
   http: typeof http;
+  invitations: typeof invitations;
   magicLinks: typeof magicLinks;
+  notifications: typeof notifications;
+  notificationsQueries: typeof notificationsQueries;
   reports: typeof reports;
   router: typeof router;
 }>;
