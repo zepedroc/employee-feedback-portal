@@ -11,7 +11,7 @@ const applicationTables = {
   magicLinks: defineTable({
     companyId: v.id("companies"),
     linkId: v.string(), // unique identifier for the magic link
-    name: v.string(), // descriptive name for the link
+    name: v.optional(v.string()), // descriptive name for the link (optional for backward compatibility)
     isActive: v.boolean(),
     createdBy: v.id("users"),
   })
@@ -44,6 +44,18 @@ const applicationTables = {
     role: v.string(), // "owner", "admin", "manager"
   })
     .index("by_user", ["userId"])
+    .index("by_company", ["companyId"]),
+
+  invitations: defineTable({
+    companyId: v.id("companies"),
+    email: v.string(),
+    invitedBy: v.id("users"),
+    token: v.string(),
+    status: v.string(), // "pending", "accepted", "expired"
+    expiresAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_email", ["email"])
     .index("by_company", ["companyId"]),
 };
 

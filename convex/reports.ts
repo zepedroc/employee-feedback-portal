@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import { api } from "./_generated/api";
 
 export const submit = mutation({
   args: {
@@ -18,24 +19,32 @@ export const submit = mutation({
       throw new Error("Invalid or inactive magic link");
     }
 
-    return await ctx.db.insert("reports", {
+    const reportId = await ctx.db.insert("reports", {
       companyId: magicLink.companyId,
       magicLinkId: args.magicLinkId,
       title: args.title,
       description: args.description,
       category: args.category,
-      isAnonymous: args.isAnonymous,
-      reporterName: args.reporterName,
-      reporterEmail: args.reporterEmail,
+      isAnonymous: true, // Reports are always anonymous
+      reporterName: undefined, // Never store reporter name
+      reporterEmail: undefined, // Never store reporter email
       status: "new",
       priority: "medium",
     });
+
+    // Schedule email notification to manager
+    await ctx.scheduler.runAfter(0, api.notifications.sendReportNotification, {
+      reportId,
+    });
+
+    return reportId;
   },
 });
 
 export const getCompanyReports = query({
   args: {
     companyId: v.id("companies"),
+    magicLinkId: v.optional(v.id("magicLinks")),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
@@ -54,20 +63,31 @@ export const getCompanyReports = query({
       throw new Error("Not authorized");
     }
 
-    const reports = await ctx.db
-      .query("reports")
-      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
-      .order("desc")
-      .collect();
+    let reports;
+    const magicLinkId = args.magicLinkId;
+    if (magicLinkId) {
+      // Filter by specific magic link
+      reports = await ctx.db
+        .query("reports")
+        .withIndex("by_magic_link", (q) => q.eq("magicLinkId", magicLinkId))
+        .filter((q) => q.eq(q.field("companyId"), args.companyId))
+        .order("desc")
+        .collect();
+    } else {
+      // Get all company reports
+      reports = await ctx.db
+        .query("reports")
+        .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+        .order("desc")
+        .collect();
+    }
 
-    // Get magic link names for each report
+    // Get assigned users for each report
     const reportsWithLinks = await Promise.all(
       reports.map(async (report) => {
-        const magicLink = await ctx.db.get(report.magicLinkId);
         const assignedUser = report.assignedTo ? await ctx.db.get(report.assignedTo) : null;
         return {
           ...report,
-          magicLinkName: magicLink?.name || "Unknown",
           assignedUserName: assignedUser?.name || assignedUser?.email || null,
         };
       })
@@ -153,12 +173,10 @@ export const getReport = query({
       throw new Error("Not authorized");
     }
 
-    const magicLink = await ctx.db.get(report.magicLinkId);
     const assignedUser = report.assignedTo ? await ctx.db.get(report.assignedTo) : null;
 
     return {
       ...report,
-      magicLinkName: magicLink?.name || "Unknown",
       assignedUserName: assignedUser?.name || assignedUser?.email || null,
     };
   },

@@ -1,9 +1,14 @@
-import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useEffect, useState } from "react";
+import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
-import { MagicLinks } from "./MagicLinks";
 import { Reports } from "./Reports";
 import { Id } from "../convex/_generated/dataModel";
+import { Copy, LayoutDashboard, UserPlus, Mail } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Company {
   _id: Id<"companies">;
@@ -16,53 +21,170 @@ interface DashboardProps {
 }
 
 export function Dashboard({ company }: DashboardProps) {
-  const [activeTab, setActiveTab] = useState<"reports" | "links">("reports");
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [isInviting, setIsInviting] = useState(false);
+
   const reports = useQuery(api.reports.getCompanyReports, { companyId: company._id });
-  const magicLinks = useQuery(api.magicLinks.getCompanyLinks, { companyId: company._id });
+  const magicLink = useQuery(api.magicLinks.getManagerLink, { companyId: company._id });
+  const createMagicLink = useMutation(api.magicLinks.create);
+  const inviteManager = useMutation(api.invitations.inviteManager);
+  const pendingInvitations = useQuery(api.invitations.getCompanyInvitations, { companyId: company._id });
 
   const newReportsCount = reports?.filter(r => r.status === "new").length || 0;
 
+  // Auto-create magic link if it doesn't exist
+  useEffect(() => {
+    if (magicLink === null && createMagicLink) {
+      createMagicLink({ companyId: company._id }).catch((error) => {
+        console.error("Failed to create magic link:", error);
+      });
+    }
+  }, [magicLink, createMagicLink, company._id]);
+
+  const handleInvite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inviteEmail.trim()) return;
+
+    setIsInviting(true);
+    try {
+      await inviteManager({ companyId: company._id, email: inviteEmail.trim() });
+      toast.success("Invitation sent successfully!");
+      setInviteEmail("");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to send invitation");
+    } finally {
+      setIsInviting(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    if (!magicLink) return;
+    const url = `${window.location.origin}/report/${magicLink.linkId}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link copied to clipboard!");
+  };
+
+  const magicLinkUrl = magicLink ? `${window.location.origin}/report/${magicLink.linkId}` : "";
+
   return (
-    <div>
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold text-primary mb-2">{company.name}</h1>
-        <p className="text-lg text-secondary">
-          Manage your employee feedback system
-        </p>
+    <div className="space-y-8">
+      <div className="flex items-center gap-3">
+        <LayoutDashboard className="h-10 w-10 text-primary" />
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight">{company.name}</h1>
+          <p className="text-lg text-muted-foreground">
+            Manage your employee feedback system
+          </p>
+        </div>
       </div>
 
-      <div className="mb-6">
-        <nav className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-          <button
-            onClick={() => setActiveTab("reports")}
-            className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
-              activeTab === "reports"
-                ? "bg-white text-primary shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Reports
-            {newReportsCount > 0 && (
-              <span className="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                {newReportsCount}
-              </span>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab("links")}
-            className={`flex-1 px-4 py-2 rounded-md font-medium transition-colors ${
-              activeTab === "links"
-                ? "bg-white text-primary shadow-sm"
-                : "text-gray-600 hover:text-gray-900"
-            }`}
-          >
-            Magic Links
-          </button>
-        </nav>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Magic Link</CardTitle>
+          <CardDescription>
+            Share this link with your employees to collect their feedback.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex gap-2">
+            <div className="grid flex-1 gap-2">
+              <Label htmlFor="link" className="sr-only">
+                Link
+              </Label>
+              <Input
+                id="link"
+                readOnly
+                value={magicLinkUrl}
+                placeholder="Generating link..."
+              />
+            </div>
+            <Button
+              onClick={copyToClipboard}
+              disabled={!magicLink}
+              className="flex items-center gap-2"
+            >
+              <Copy className="w-4 h-4" />
+              Copy
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-      {activeTab === "reports" && <Reports companyId={company._id} />}
-      {activeTab === "links" && <MagicLinks companyId={company._id} />}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <UserPlus className="w-5 h-5" />
+            Invite Manager
+          </CardTitle>
+          <CardDescription>
+            Invite another manager to join your company. They'll get their own magic link.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleInvite} className="space-y-4">
+            <div className="flex gap-2">
+              <div className="grid flex-1 gap-2">
+                <Label htmlFor="invite-email">Email Address</Label>
+                <Input
+                  id="invite-email"
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="manager@example.com"
+                  required
+                />
+              </div>
+              <div className="flex items-end">
+                <Button type="submit" disabled={isInviting || !inviteEmail.trim()}>
+                  {isInviting ? "Sending..." : "Send Invitation"}
+                </Button>
+              </div>
+            </div>
+          </form>
+
+          {pendingInvitations && pendingInvitations.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <Label className="text-sm font-medium">Pending Invitations</Label>
+              <div className="space-y-2">
+                {pendingInvitations.map((invitation) => {
+                  const date = new Date(invitation.expiresAt);
+                  const day = date.getDate();
+                  const month = date.toLocaleDateString('en-US', { month: 'short' });
+                  const year = date.getFullYear();
+                  const formattedDate = `${day} ${month} ${year}`;
+                  
+                  return (
+                    <div
+                      key={invitation._id}
+                      className="flex items-center justify-between p-2 bg-muted rounded-md"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm">{invitation.email}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        {formattedDate}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold tracking-tight">Reports</h2>
+          {newReportsCount > 0 && (
+            <span className="bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded-full">
+              {newReportsCount} New
+            </span>
+          )}
+        </div>
+        <Reports companyId={company._id} />
+      </div>
     </div>
   );
 }
