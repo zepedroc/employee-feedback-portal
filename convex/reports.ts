@@ -29,7 +29,6 @@ export const submit = mutation({
       reporterName: undefined, // Never store reporter name
       reporterEmail: undefined, // Never store reporter email
       status: "new",
-      priority: "medium",
     });
 
     // Schedule email notification to manager
@@ -101,7 +100,6 @@ export const updateStatus = mutation({
   args: {
     reportId: v.id("reports"),
     status: v.string(),
-    priority: v.optional(v.string()),
     assignedTo: v.optional(v.id("users")),
     notes: v.optional(v.string()),
   },
@@ -130,10 +128,6 @@ export const updateStatus = mutation({
     const updates: any = {
       status: args.status,
     };
-
-    if (args.priority !== undefined) {
-      updates.priority = args.priority;
-    }
 
     if (args.assignedTo !== undefined) {
       updates.assignedTo = args.assignedTo;

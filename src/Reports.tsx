@@ -22,13 +22,6 @@ const statusVariants = {
   closed: "bg-gray-100 text-gray-800 border-gray-200",
 };
 
-const priorityVariants = {
-  low: "bg-gray-100 text-gray-800 border-gray-200",
-  medium: "bg-blue-100 text-blue-800 border-blue-200",
-  high: "bg-orange-100 text-orange-800 border-orange-200",
-  urgent: "bg-red-100 text-red-800 border-red-200",
-};
-
 const formatDate = (timestamp: number) => {
   const date = new Date(timestamp);
   const day = date.getDate();
@@ -70,12 +63,11 @@ export function Reports({ companyId }: ReportsProps) {
   const handleStatusUpdate = async (
     reportId: Id<"reports">,
     status: string,
-    priority?: string,
     assignedTo?: Id<"users">,
     notes?: string
   ) => {
     try {
-      await updateStatus({ reportId, status, priority, assignedTo, notes });
+      await updateStatus({ reportId, status, assignedTo, notes });
       toast.success("Report updated successfully!");
     } catch (error) {
       toast.error("Failed to update report");
@@ -184,12 +176,11 @@ export function Reports({ companyId }: ReportsProps) {
 interface ReportDetailsProps {
   report: any;
   managers: any[];
-  onUpdate: (reportId: Id<"reports">, status: string, priority?: string, assignedTo?: Id<"users">, notes?: string) => void;
+  onUpdate: (reportId: Id<"reports">, status: string, assignedTo?: Id<"users">, notes?: string) => void;
 }
 
 function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
   const [status, setStatus] = useState(report.status);
-  const [priority, setPriority] = useState(report.priority);
   const [assignedTo, setAssignedTo] = useState(report.assignedTo || "unassigned");
   const [notes, setNotes] = useState(report.notes || "");
 
@@ -197,7 +188,6 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
     onUpdate(
       report._id,
       status,
-      priority,
       assignedTo === "unassigned" ? undefined : (assignedTo as Id<"users">),
       notes || undefined
     );
@@ -209,9 +199,6 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
         <div className="flex flex-wrap gap-1 mb-2">
           <Badge className={statusVariants[report.status as keyof typeof statusVariants]}>
             {report.status.replace("_", " ")}
-          </Badge>
-          <Badge className={priorityVariants[report.priority as keyof typeof priorityVariants]}>
-            {report.priority}
           </Badge>
         </div>
         <CardTitle>{report.title}</CardTitle>
@@ -247,21 +234,6 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
                 <SelectItem value="in_progress">In Progress</SelectItem>
                 <SelectItem value="resolved">Resolved</SelectItem>
                 <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="priority">Priority</Label>
-            <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger id="priority">
-                <SelectValue placeholder="Set priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
               </SelectContent>
             </Select>
           </div>
