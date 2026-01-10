@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import { getAuthUserId, createAccount } from "@convex-dev/auth/server";
 import { api } from "./_generated/api";
 
 function generateToken(): string {
@@ -146,6 +146,113 @@ export const getCompanyInvitations = query({
   },
 });
 
+// Accept invitation - works with anonymous users
+// User should be signed in anonymously before calling this
+export const acceptInvitationWithoutAuth = mutation({
+  args: {
+    token: v.string(),
+  },
+  handler: async (ctx, args) => {
+    // Get current user (can be anonymous)
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error("Please sign in first");
+    }
+
+    const invitation = await ctx.db
+      .query("invitations")
+      .withIndex("by_token", (q) => q.eq("token", args.token))
+      .first();
+
+    if (!invitation) {
+      throw new Error("Invalid invitation token");
+    }
+
+    if (invitation.status !== "pending") {
+      throw new Error("Invitation has already been accepted or expired");
+    }
+
+    if (invitation.expiresAt < Date.now()) {
+      // Mark as expired
+      await ctx.db.patch(invitation._id, { status: "expired" });
+      throw new Error("Invitation has expired");
+    }
+
+    // Get current user
+    const currentUser = await ctx.db.get(userId);
+    
+    // Check if user with invitation email already exists (case-insensitive)
+    const invitationEmailLower = invitation.email.toLowerCase().trim();
+    const allUsers = await ctx.db.query("users").collect();
+    const existingUserWithEmail = allUsers.find((user: any) => 
+      user.email?.toLowerCase().trim() === invitationEmailLower
+    );
+
+    let targetUserId = userId;
+
+    if (existingUserWithEmail && existingUserWithEmail._id !== userId) {
+      // User with this email already exists
+      // Check if they're already a manager
+      const existingManager = await ctx.db
+        .query("managers")
+        .withIndex("by_user", (q) => q.eq("userId", existingUserWithEmail._id))
+        .filter((q) => q.eq(q.field("companyId"), invitation.companyId))
+        .first();
+
+      if (existingManager) {
+        // Already a manager, just mark invitation as accepted
+        await ctx.db.patch(invitation._id, { status: "accepted" });
+        return { companyId: invitation.companyId, userId: existingUserWithEmail._id, needsPassword: false };
+      }
+      
+      // Use the existing user instead
+      targetUserId = existingUserWithEmail._id;
+    } else {
+      // Update current user's email to match invitation (normalize email)
+      if (currentUser) {
+        await ctx.db.patch(userId, { email: invitationEmailLower });
+      }
+    }
+
+    // Check if user is already a manager
+    const existingManager = await ctx.db
+      .query("managers")
+      .withIndex("by_user", (q) => q.eq("userId", targetUserId))
+      .filter((q) => q.eq(q.field("companyId"), invitation.companyId))
+      .first();
+
+    if (existingManager) {
+      // Already a manager, just mark invitation as accepted
+      await ctx.db.patch(invitation._id, { status: "accepted" });
+      return { companyId: invitation.companyId, userId: targetUserId, needsPassword: false };
+    }
+
+    // Add user as manager
+    await ctx.db.insert("managers", {
+      userId: targetUserId,
+      companyId: invitation.companyId,
+      role: "manager",
+    });
+
+    // Create magic link for the new manager
+    const linkId = Math.random().toString(36).substring(2, 15) + 
+                   Math.random().toString(36).substring(2, 15);
+    
+    await ctx.db.insert("magicLinks", {
+      companyId: invitation.companyId,
+      linkId,
+      isActive: true,
+      createdBy: targetUserId,
+    });
+
+    // Mark invitation as accepted
+    await ctx.db.patch(invitation._id, { status: "accepted" });
+
+    return { companyId: invitation.companyId, userId: targetUserId, needsPassword: true };
+  },
+});
+
+// Original acceptInvitation for authenticated users
 export const acceptInvitation = mutation({
   args: {
     token: v.string(),
