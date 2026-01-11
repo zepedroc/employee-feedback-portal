@@ -219,7 +219,6 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
           <p className="text-sm leading-relaxed">{report.description}</p>
         </div>
 
-
         <div className="space-y-4">
           <h4 className="text-sm font-semibold">Update Action</h4>
 

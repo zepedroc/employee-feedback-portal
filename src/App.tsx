@@ -24,7 +24,7 @@ export default function App() {
 function MainApp() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm h-16 flex justify-between items-center border-b px-6">
+      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-xs h-16 flex justify-between items-center border-b px-6">
         <div className="flex items-center gap-2">
           <div className="bg-primary h-6 w-6 rounded-sm rotate-3" />
           <h2 className="text-xl font-bold tracking-tight">Feedback Portal</h2>
