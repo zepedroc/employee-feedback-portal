@@ -130,7 +130,7 @@ export function Dashboard({ company }: DashboardProps) {
             Invite Manager
           </CardTitle>
           <CardDescription>
-            Invite another manager to join your company. They'll get their own magic link.
+            Invite another manager to join your company. They'll get their own reporting link.
           </CardDescription>
         </CardHeader>
         <CardContent>

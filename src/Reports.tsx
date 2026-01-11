@@ -46,7 +46,6 @@ export function Reports({ companyId }: ReportsProps) {
     api.reports.getCompanyReports,
     {
       companyId,
-      magicLinkId: showOnlyMyLink && managerLink?._id ? managerLink._id : undefined,
     }
   );
   const selectedReportData = useQuery(
@@ -56,9 +55,16 @@ export function Reports({ companyId }: ReportsProps) {
   const updateStatus = useMutation(api.reports.updateStatus);
   const managers = useQuery(api.companies.getCompanyManagers, { companyId });
 
-  const filteredReports = reports?.filter(report =>
-    statusFilter === "all" || report.status === statusFilter
-  ) || [];
+  const filteredReports = reports?.filter(report => {
+    // Filter by magic link if toggle is enabled
+    if (showOnlyMyLink && managerLink?._id) {
+      if (report.magicLinkId !== managerLink._id) {
+        return false;
+      }
+    }
+    // Filter by status
+    return statusFilter === "all" || report.status === statusFilter;
+  }) || [];
 
   const handleStatusUpdate = async (
     reportId: Id<"reports">,
@@ -176,7 +182,7 @@ export function Reports({ companyId }: ReportsProps) {
 interface ReportDetailsProps {
   report: any;
   managers: any[];
-  onUpdate: (reportId: Id<"reports">, status: string, assignedTo?: Id<"users">, notes?: string) => void;
+  onUpdate: (reportId: Id<"reports">, status: string, assignedTo?: Id<"users">, notes?: string) => void | Promise<void>;
 }
 
 function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
@@ -184,8 +190,8 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
   const [assignedTo, setAssignedTo] = useState(report.assignedTo || "unassigned");
   const [notes, setNotes] = useState(report.notes || "");
 
-  const handleUpdate = () => {
-    onUpdate(
+  const handleUpdate = async () => {
+    await onUpdate(
       report._id,
       status,
       assignedTo === "unassigned" ? undefined : (assignedTo as Id<"users">),
@@ -200,6 +206,9 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
           <Badge className={statusVariants[report.status as keyof typeof statusVariants]}>
             {report.status.replace("_", " ")}
           </Badge>
+          <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+            {report.category}
+          </Badge>
         </div>
         <CardTitle>{report.title}</CardTitle>
         <CardDescription>Submitted on {formatDate(report._creationTime)}</CardDescription>
@@ -208,13 +217,6 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
         <div className="space-y-2">
           <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description</Label>
           <p className="text-sm leading-relaxed">{report.description}</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Category</Label>
-            <p className="text-sm font-medium capitalize">{report.category}</p>
-          </div>
         </div>
 
         <hr className="border-border" />
@@ -269,7 +271,7 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
         </div>
       </CardContent>
       <CardFooter>
-        <Button onClick={handleUpdate} className="w-full">
+        <Button onClick={() => { void handleUpdate(); }} className="w-full">
           Update Report
         </Button>
       </CardFooter>
