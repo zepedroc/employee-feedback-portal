@@ -1,6 +1,6 @@
 {
-  "name": "flex-template",
-  "private": true,
+  "name": "employee-feedback-reporting-system",
+  "private": false,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
