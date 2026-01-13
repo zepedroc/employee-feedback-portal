@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../convex/_generated/api";
@@ -7,40 +7,67 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { Authenticated, Unauthenticated } from "convex/react";
-import { SignInForm } from "./SignInForm";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { PasswordSetup } from "./PasswordSetup";
 
 export function InviteAccept() {
   const { token } = useParams<{ token: string }>();
   const navigate = useNavigate();
   const [isAccepting, setIsAccepting] = useState(false);
+  const [needsPassword, setNeedsPassword] = useState(false);
+  const [invitationAccepted, setInvitationAccepted] = useState(false);
   const loggedInUser = useQuery(api.auth.loggedInUser);
+  const { signIn } = useAuthActions();
 
   const invitation = useQuery(
     api.invitations.getInvitationByToken,
     token ? { token } : "skip"
   );
   const acceptInvitation = useMutation(api.invitations.acceptInvitation);
-
-  // Check if user email matches invitation email after sign in
-  useEffect(() => {
-    if (loggedInUser && invitation && loggedInUser.email === invitation.email && !isAccepting) {
-      // User signed in with matching email, they can now accept
-      // Don't auto-accept, let them click the button
-    }
-  }, [loggedInUser, invitation, isAccepting]);
+  const acceptInvitationWithoutAuth = useMutation(api.invitations.acceptInvitationWithoutAuth);
 
   const handleAccept = async () => {
-    if (!token) return;
+    if (!token || !invitation) return;
 
     setIsAccepting(true);
     try {
-      const result = await acceptInvitation({ token });
-      toast.success("Invitation accepted! Welcome to the team.");
-      navigate("/");
+      // If user is authenticated and email matches, use regular accept
+      if (loggedInUser && loggedInUser.email === invitation.email) {
+        await acceptInvitation({ token });
+        toast.success("Invitation accepted! Welcome to the team.");
+        void navigate("/");
+        return;
+      }
+
+      // If user is not authenticated, sign in anonymously first
+      if (!loggedInUser) {
+        await signIn("anonymous");
+        // Wait a moment for auth to propagate
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      // Accept invitation (works with anonymous users)
+      const result = await acceptInvitationWithoutAuth({ token });
+      setInvitationAccepted(true);
+      
+      if (result.needsPassword) {
+        setNeedsPassword(true);
+        toast.success("Invitation accepted! Please set your password.");
+      } else {
+        toast.success("Invitation accepted! Welcome to the team.");
+        void navigate("/");
+      }
     } catch (error: any) {
-      toast.error(error.message || "Failed to accept invitation");
+      const errorMessage = error?.message || error?.data || String(error) || "Failed to accept invitation";
+      toast.error(errorMessage);
+      setIsAccepting(false);
+    } finally {
       setIsAccepting(false);
     }
+  };
+
+  const handlePasswordComplete = () => {
+    void navigate("/");
   };
 
   if (!token) {
@@ -88,6 +115,28 @@ export function InviteAccept() {
     );
   }
 
+  // Show password setup if invitation was accepted and password is needed
+  if (invitationAccepted && needsPassword && invitation) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <CheckCircle2 className="h-12 w-12 text-green-500" />
+            </div>
+            <CardTitle className="text-2xl font-bold">Invitation Accepted!</CardTitle>
+            <CardDescription>
+              Please set a password to complete your account setup
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <PasswordSetup email={invitation.email} onComplete={handlePasswordComplete} />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <Card className="max-w-md w-full">
@@ -111,35 +160,57 @@ export function InviteAccept() {
               </p>
             )}
             <p>
-              <strong>Your email:</strong> {invitation.email}
+              <strong>Email:</strong> {invitation.email}
             </p>
           </div>
 
           <Authenticated>
-            <Button
-              onClick={handleAccept}
-              disabled={isAccepting}
-              className="w-full"
-            >
-              {isAccepting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Accepting...
-                </>
-              ) : (
-                "Accept Invitation"
-              )}
-            </Button>
+            {loggedInUser && loggedInUser.email === invitation.email ? (
+              <Button
+                onClick={() => void handleAccept()}
+                disabled={isAccepting}
+                className="w-full"
+              >
+                {isAccepting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Accepting...
+                  </>
+                ) : (
+                  "Accept Invitation"
+                )}
+              </Button>
+            ) : (
+              <div className="p-4 bg-muted rounded-md">
+                <p className="text-sm text-center text-muted-foreground">
+                  You are signed in as <strong>{loggedInUser?.email}</strong>, but this invitation is for <strong>{invitation.email}</strong>.
+                </p>
+                <p className="text-sm text-center text-muted-foreground mt-2">
+                  Please sign out to accept this invitation with the correct email.
+                </p>
+              </div>
+            )}
           </Authenticated>
 
           <Unauthenticated>
             <div className="space-y-4">
-              <div className="p-4 bg-muted rounded-md">
-                <p className="text-sm text-center text-muted-foreground mb-4">
-                  Please sign in or create an account with the email <strong>{invitation.email}</strong> to accept this invitation.
-                </p>
-                <SignInForm />
-              </div>
+              <p className="text-sm text-center text-muted-foreground">
+                Click the button below to accept this invitation. You'll be prompted to set a password afterwards.
+              </p>
+              <Button
+                onClick={() => void handleAccept()}
+                disabled={isAccepting}
+                className="w-full"
+              >
+                {isAccepting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Accepting...
+                  </>
+                ) : (
+                  "Accept Invitation"
+                )}
+              </Button>
             </div>
           </Unauthenticated>
         </CardContent>

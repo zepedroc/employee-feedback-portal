@@ -2,7 +2,6 @@
 
 import { action } from "./_generated/server";
 import { v } from "convex/values";
-import { Resend } from "resend";
 import { internal } from "./_generated/api";
 
 /**
@@ -24,15 +23,12 @@ export const sendReportNotification = action({
       return null;
     }
 
-    // Get Resend API key from environment variable
-    const apiKey = process.env.RESEND_API_KEY;
+    // Get Brevo API key from environment variable
+    const apiKey = process.env.BREVO_API_KEY;
     if (!apiKey) {
-      console.error("RESEND_API_KEY environment variable is not set");
+      console.error("BREVO_API_KEY environment variable is not set");
       return null;
     }
-
-    // Initialize Resend
-    const resend = new Resend(apiKey);
 
     // Helper function to escape HTML
     const escapeHtml = (text: string): string => {
@@ -44,23 +40,53 @@ export const sendReportNotification = action({
         .replace(/'/g, "&#039;");
     };
 
-    // Send email notification
+    // Send email notification using Brevo API
     try {
-      await resend.emails.send({
-        from: "onboarding@resend.dev",
-        to: info.managerEmail,
-        subject: `New Report Submitted: ${escapeHtml(info.reportTitle)}`,
-        html: `
-          <h2>New Report Submitted</h2>
-          <p>A new report has been submitted and requires your attention.</p>
-          
-          <h3>Report Details:</h3>
-          <p><strong>Title:</strong> ${escapeHtml(info.reportTitle)}</p>
-          <p><strong>Category:</strong> ${escapeHtml(info.reportCategory)}</p>
-          <p><strong>Description:</strong></p>
-          <p>${escapeHtml(info.reportDescription)}</p>
-        `,
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "api-key": apiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: {
+            name: "Employee Feedback System",
+            email: "zepedrocm@hotmail.com",
+          },
+          to: [
+            {
+              email: info.managerEmail,
+              name: info.managerEmail,
+            },
+          ],
+          subject: `New Report Submitted`,
+          htmlContent: `
+            <html>
+              <head></head>
+              <body>
+                <h2>New Report Submitted</h2>
+                <p>A new report has been submitted and requires your attention.</p>
+                
+                <h3>Report Details:</h3>
+                <p><strong>Title:</strong> ${escapeHtml(info.reportTitle)}</p>
+                <p><strong>Category:</strong> ${escapeHtml(info.reportCategory)}</p>
+                <p><strong>Description:</strong></p>
+                <p>${escapeHtml(info.reportDescription)}</p>
+              </body>
+            </html>
+          `,
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error("Brevo API error:", response.status, errorData);
+        throw new Error(`Failed to send email: ${response.status} ${errorData}`);
+      }
+
+      const result = await response.json();
+      console.log("Email sent successfully:", result.messageId);
     } catch (error) {
       console.error("Failed to send email notification:", error);
       throw error;
@@ -89,15 +115,12 @@ export const sendInvitationEmail = action({
       return null;
     }
 
-    // Get Resend API key from environment variable
-    const apiKey = 're_LcwCvQwe_2UuM17a8QLwzNNsv2FC7fxD5'; //process.env.RESEND_API_KEY;
+    // Get Brevo API key from environment variable
+    const apiKey = process.env.BREVO_API_KEY;
     if (!apiKey) {
-      console.error("RESEND_API_KEY environment variable is not set");
+      console.error("BREVO_API_KEY environment variable is not set");
       return null;
     }
-
-    // Initialize Resend
-    const resend = new Resend(apiKey);
 
     // Helper function to escape HTML
     const escapeHtml = (text: string): string => {
@@ -109,27 +132,57 @@ export const sendInvitationEmail = action({
         .replace(/'/g, "&#039;");
     };
 
-    const invitationUrl = `${process.env.SITE_URL || "http://localhost:5173"}/invite/${invitation.token}`;
+    const invitationUrl = `http://localhost:5173/invite/${invitation.token}`;
 
-    // Send email notification
+    // Send email notification using Brevo API
     try {
-      await resend.emails.send({
-        from: "onboarding@resend.dev",
-        to: invitation.email,
-        subject: `You've been invited to manage ${escapeHtml(invitation.companyName)}`,
-        html: `
-          <h2>Manager Invitation</h2>
-          <p>You've been invited by ${escapeHtml(invitation.inviterName || invitation.inviterEmail)} to become a manager for <strong>${escapeHtml(invitation.companyName)}</strong>.</p>
-          
-          <p>Click the link below to accept the invitation:</p>
-          <p><a href="${invitationUrl}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Accept Invitation</a></p>
-          
-          <p>Or copy and paste this URL into your browser:</p>
-          <p>${invitationUrl}</p>
-          
-          <p><small>This invitation will expire in 7 days.</small></p>
-        `,
+      const response = await fetch("https://api.brevo.com/v3/smtp/email", {
+        method: "POST",
+        headers: {
+          "accept": "application/json",
+          "api-key": apiKey,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          sender: {
+            name: "Employee Feedback System",
+            email: "zepedrocm@hotmail.com",
+          },
+          to: [
+            {
+              email: invitation.email,
+              name: invitation.email,
+            },
+          ],
+          subject: `You've been invited to manage ${escapeHtml(invitation.companyName)}`,
+          htmlContent: `
+            <html>
+              <head></head>
+              <body>
+                <h2>Manager Invitation</h2>
+                <p>You've been invited by ${escapeHtml(invitation.inviterName || invitation.inviterEmail)} to become a manager for <strong>${escapeHtml(invitation.companyName)}</strong>.</p>
+                
+                <p>Click the link below to accept the invitation:</p>
+                <p><a href="${invitationUrl}" style="display: inline-block; padding: 10px 20px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px;">Accept Invitation</a></p>
+                
+                <p>Or copy and paste this URL into your browser:</p>
+                <p>${invitationUrl}</p>
+                
+                <p><small>This invitation will expire in 7 days.</small></p>
+              </body>
+            </html>
+          `,
+        }),
       });
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error("Brevo API error:", response.status, errorData);
+        throw new Error(`Failed to send email: ${response.status} ${errorData}`);
+      }
+
+      const result = await response.json();
+      console.log("Email sent successfully:", result.messageId);
     } catch (error) {
       console.error("Failed to send invitation email:", error);
       throw error;

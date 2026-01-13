@@ -29,14 +29,12 @@ const applicationTables = {
     reporterName: v.optional(v.string()),
     reporterEmail: v.optional(v.string()),
     status: v.string(), // "new", "reviewing", "in_progress", "resolved", "closed"
-    priority: v.string(), // "low", "medium", "high", "urgent"
     assignedTo: v.optional(v.id("users")),
     notes: v.optional(v.string()),
   })
     .index("by_company", ["companyId"])
     .index("by_magic_link", ["magicLinkId"])
-    .index("by_status", ["status"])
-    .index("by_priority", ["priority"]),
+    .index("by_status", ["status"]),
 
   managers: defineTable({
     userId: v.id("users"),

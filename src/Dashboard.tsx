@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../convex/_generated/api";
 import { Reports } from "./Reports";
 import { Id } from "../convex/_generated/dataModel";
-import { Copy, LayoutDashboard, UserPlus, Mail } from "lucide-react";
+import { Copy, Check, LayoutDashboard, UserPlus, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,14 +23,12 @@ interface DashboardProps {
 export function Dashboard({ company }: DashboardProps) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [isInviting, setIsInviting] = useState(false);
+  const [isCopied, setIsCopied] = useState(false);
 
-  const reports = useQuery(api.reports.getCompanyReports, { companyId: company._id });
   const magicLink = useQuery(api.magicLinks.getManagerLink, { companyId: company._id });
   const createMagicLink = useMutation(api.magicLinks.create);
   const inviteManager = useMutation(api.invitations.inviteManager);
   const pendingInvitations = useQuery(api.invitations.getCompanyInvitations, { companyId: company._id });
-
-  const newReportsCount = reports?.filter(r => r.status === "new").length || 0;
 
   // Auto-create magic link if it doesn't exist
   useEffect(() => {
@@ -63,6 +61,8 @@ export function Dashboard({ company }: DashboardProps) {
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Link copied to clipboard!");
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 2000);
     } catch {
       toast.error("Failed to copy link to clipboard");
     }
@@ -105,10 +105,19 @@ export function Dashboard({ company }: DashboardProps) {
             <Button
               onClick={() => void copyToClipboard()}
               disabled={!magicLink}
-              className="flex items-center gap-2"
+              className={`flex items-center gap-2 ${isCopied ? "bg-green-600 hover:bg-green-700" : ""}`}
             >
-              <Copy className="w-4 h-4" />
-              Copy
+              {isCopied ? (
+                <>
+                  <Check className="w-4 h-4" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="w-4 h-4" />
+                  Copy
+                </>
+              )}
             </Button>
           </div>
         </CardContent>
@@ -121,7 +130,7 @@ export function Dashboard({ company }: DashboardProps) {
             Invite Manager
           </CardTitle>
           <CardDescription>
-            Invite another manager to join your company. They'll get their own magic link.
+            Invite another manager to join your company. They'll get their own reporting link.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -181,11 +190,6 @@ export function Dashboard({ company }: DashboardProps) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold tracking-tight">Reports</h2>
-          {newReportsCount > 0 && (
-            <span className="bg-destructive text-destructive-foreground text-xs font-bold px-2 py-1 rounded-full">
-              {newReportsCount} New
-            </span>
-          )}
         </div>
         <Reports companyId={company._id} />
       </div>

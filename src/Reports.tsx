@@ -22,13 +22,6 @@ const statusVariants = {
   closed: "bg-gray-100 text-gray-800 border-gray-200",
 };
 
-const priorityVariants = {
-  low: "bg-gray-100 text-gray-800 border-gray-200",
-  medium: "bg-blue-100 text-blue-800 border-blue-200",
-  high: "bg-orange-100 text-orange-800 border-orange-200",
-  urgent: "bg-red-100 text-red-800 border-red-200",
-};
-
 const formatDate = (timestamp: number) => {
   const date = new Date(timestamp);
   const day = date.getDate();
@@ -53,7 +46,6 @@ export function Reports({ companyId }: ReportsProps) {
     api.reports.getCompanyReports,
     {
       companyId,
-      magicLinkId: showOnlyMyLink && managerLink?._id ? managerLink._id : undefined,
     }
   );
   const selectedReportData = useQuery(
@@ -63,19 +55,25 @@ export function Reports({ companyId }: ReportsProps) {
   const updateStatus = useMutation(api.reports.updateStatus);
   const managers = useQuery(api.companies.getCompanyManagers, { companyId });
 
-  const filteredReports = reports?.filter(report =>
-    statusFilter === "all" || report.status === statusFilter
-  ) || [];
+  const filteredReports = reports?.filter(report => {
+    // Filter by magic link if toggle is enabled
+    if (showOnlyMyLink && managerLink?._id) {
+      if (report.magicLinkId !== managerLink._id) {
+        return false;
+      }
+    }
+    // Filter by status
+    return statusFilter === "all" || report.status === statusFilter;
+  }) || [];
 
   const handleStatusUpdate = async (
     reportId: Id<"reports">,
     status: string,
-    priority?: string,
     assignedTo?: Id<"users">,
     notes?: string
   ) => {
     try {
-      await updateStatus({ reportId, status, priority, assignedTo, notes });
+      await updateStatus({ reportId, status, assignedTo, notes });
       toast.success("Report updated successfully!");
     } catch (error) {
       toast.error("Failed to update report");
@@ -184,20 +182,18 @@ export function Reports({ companyId }: ReportsProps) {
 interface ReportDetailsProps {
   report: any;
   managers: any[];
-  onUpdate: (reportId: Id<"reports">, status: string, priority?: string, assignedTo?: Id<"users">, notes?: string) => void;
+  onUpdate: (reportId: Id<"reports">, status: string, assignedTo?: Id<"users">, notes?: string) => void | Promise<void>;
 }
 
 function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
   const [status, setStatus] = useState(report.status);
-  const [priority, setPriority] = useState(report.priority);
   const [assignedTo, setAssignedTo] = useState(report.assignedTo || "unassigned");
   const [notes, setNotes] = useState(report.notes || "");
 
-  const handleUpdate = () => {
-    onUpdate(
+  const handleUpdate = async () => {
+    await onUpdate(
       report._id,
       status,
-      priority,
       assignedTo === "unassigned" ? undefined : (assignedTo as Id<"users">),
       notes || undefined
     );
@@ -210,8 +206,8 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
           <Badge className={statusVariants[report.status as keyof typeof statusVariants]}>
             {report.status.replace("_", " ")}
           </Badge>
-          <Badge className={priorityVariants[report.priority as keyof typeof priorityVariants]}>
-            {report.priority}
+          <Badge className="bg-purple-100 text-purple-800 border-purple-200">
+            {report.category}
           </Badge>
         </div>
         <CardTitle>{report.title}</CardTitle>
@@ -222,15 +218,6 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
           <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description</Label>
           <p className="text-sm leading-relaxed">{report.description}</p>
         </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Category</Label>
-            <p className="text-sm font-medium capitalize">{report.category}</p>
-          </div>
-        </div>
-
-        <hr className="border-border" />
 
         <div className="space-y-4">
           <h4 className="text-sm font-semibold">Update Action</h4>
@@ -247,21 +234,6 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
                 <SelectItem value="in_progress">In Progress</SelectItem>
                 <SelectItem value="resolved">Resolved</SelectItem>
                 <SelectItem value="closed">Closed</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="priority">Priority</Label>
-            <Select value={priority} onValueChange={setPriority}>
-              <SelectTrigger id="priority">
-                <SelectValue placeholder="Set priority" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="low">Low</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="urgent">Urgent</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -297,7 +269,7 @@ function ReportDetails({ report, managers, onUpdate }: ReportDetailsProps) {
         </div>
       </CardContent>
       <CardFooter>
-        <Button onClick={handleUpdate} className="w-full">
+        <Button onClick={() => { void handleUpdate(); }} className="w-full">
           Update Report
         </Button>
       </CardFooter>
