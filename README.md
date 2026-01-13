@@ -1,7 +1,60 @@
 # Employee Feedback Reporting System
   
-This is a project built with [Chef](https://chef.convex.dev) using [Convex](https://convex.dev) as its backend.
-  
+## System Architecture
+
+```mermaid
+graph TB
+    subgraph "Users"
+        Manager[Manager]
+        Employee[Employee]
+    end
+    
+    subgraph "Frontend - React/Vite"
+        SignIn[Sign In Form]
+        Dashboard[Dashboard]
+        CompanySetup[Company Setup]
+        ReportForm[Report Form]
+        InviteAccept[Invite Accept]
+    end
+    
+    subgraph "Backend - Convex"
+        Auth[Convex Auth]
+        Companies[Companies API]
+        Reports[Reports API]
+        Invitations[Invitations API]
+        MagicLinks[Magic Links API]
+        Notifications[Notifications API]
+    end
+    
+    subgraph "External Services"
+        Brevo[Brevo Email Service]
+    end
+    
+    Manager -->|Signs In| SignIn
+    Manager -->|Views Reports| Dashboard
+    Manager -->|Sets Up Company| CompanySetup
+    Manager -->|Invites Managers| InviteAccept
+    
+    Employee -->|Submits Feedback| ReportForm
+    
+    SignIn --> Auth
+    Dashboard --> Companies
+    Dashboard --> Reports
+    CompanySetup --> Companies
+    ReportForm --> MagicLinks
+    ReportForm --> Reports
+    InviteAccept --> Invitations
+    InviteAccept --> Companies
+    
+    Reports -->|Triggers| Notifications
+    Invitations -->|Triggers| Notifications
+    Notifications -->|Sends Email| Brevo
+    
+    style Manager fill:#e1f5ff
+    style Employee fill:#fff4e1
+    style Brevo fill:#ffe1f5
+```
+
 ## Technology Choices
 
 ### Why Convex?
@@ -36,4 +89,25 @@ This application uses [Brevo](https://www.brevo.com/) for sending email notifica
 - Report notifications when a new report is submitted
 
 **Note**: Emails will probably go to the spam folder. This is expected behavior, especially when using personal email addresses as the sender (as in the case of this project). Recipients should check their spam/junk folder for emails from this system.
+
+## Magic Links & Manager System
+
+### Requirements Clarification
+
+During development, there was an apparent contradiction in the requirements:
+- One requirement stated: "create and manage a unique per company, magic links"
+- Another requirement stated: "Each manager's link must be distinct for organized tracking"
+
+### Solution Implemented
+
+To resolve this possible contradiction, the system was designed with the following approach:
+
+1. **Multiple Managers per Company**: Companies can have multiple managers, each with their own unique magic link
+2. **Invitation System**: An invitation feature was added to allow existing managers to invite additional managers to their company
+3. **Unique Magic Links per Manager**: Each manager receives their own distinct magic link for organized tracking
+4. **Flexible Reporting View**: The UI allows managers to:
+   - View all reports submitted to their company (company-wide view)
+   - Toggle to view only reports created using their specific magic link (personal view)
+
+This design ensures both requirements are satisfied: companies have unique magic links (one per manager), and each manager's link is distinct for organized tracking purposes.
 
